@@ -1,29 +1,25 @@
-import { TSchema } from '@sinclair/typebox'
-import { Value, ValueError } from '@sinclair/typebox/value'
 import { NextFunction, Request, Response } from "express"
+import { AnyObjectSchema, ValidationError } from "yup"
 
-/**
- * Transforma a mensagem de erro em um formato mais legível
- * 
- * @param error 
- * @returns 
- */
-function transformMessage(error: ValueError) {
-    const { message, path } = error
+export const createValidator = (schema: AnyObjectSchema) => {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            await schema.validate(req.body, {
+                // retorna todos os erros de uma vez
+                abortEarly: false,
+                // remove campos que não estão no schema
+                stripUnknown: true,
+            });
 
-    return `${path.slice(1)} ${message.toLowerCase()}`
-}
+            next()
+        } catch (error) {
+            if (error instanceof ValidationError) {
+                res.status(422).json({ messages: error.errors })
 
-export const createValidator = <T extends TSchema>(schema: T) => {
-    return (req: Request, res: Response, next: NextFunction): void => {
-        const messages = [...Value.Errors(schema, req.body)]
-
-        if (messages.length > 0) {
-            res.status(400).json({ messages: messages.map(transformMessage) })
-
-            return;
+                return
+            }
+            
+            res.status(500).json({ message: 'Internal server error' })
         }
-
-        next()
     }
 }
