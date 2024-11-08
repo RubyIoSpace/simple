@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
 import { config } from './config'
-import userRouter from './user/route'
+import userRouter from './modules/user/route'
 
 const app = express()
 
